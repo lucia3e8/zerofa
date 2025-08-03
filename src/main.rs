@@ -44,6 +44,7 @@ fn main() {
         .expect("IMAP_PORT must be a number");
     let username = env::var("IMAP_USERNAME").expect("IMAP_USERNAME not set");
     let password = env::var("IMAP_PASSWORD").expect("IMAP_PASSWORD not set");
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
 
     // Shared storage for the latest 2FA code, load from disk if available
     let initial_code = load_code();
@@ -54,9 +55,11 @@ fn main() {
     let latest_code_http = Arc::clone(&latest_code);
 
     // Start HTTP server in a separate thread
+    let port_clone = port.clone();
     thread::spawn(move || {
-        let server = Server::http("0.0.0.0:8080").expect("Failed to start HTTP server");
-        println!("HTTP server listening on http://0.0.0.0:8080");
+        let addr = format!("0.0.0.0:{}", port_clone);
+        let server = Server::http(&addr).expect("Failed to start HTTP server");
+        println!("HTTP server listening on http://{}", addr);
 
         for request in server.incoming_requests() {
             let response = match latest_code_http.lock() {
